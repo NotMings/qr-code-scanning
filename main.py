@@ -1,0 +1,96 @@
+import tkinter.messagebox
+from tkinter import *
+import pyperclip
+from PIL import ImageTk
+from screenshot import *
+
+global tk_image, screenshot
+
+
+def copy_qr_code(result):
+    pyperclip.copy(result)
+
+
+class Main:
+    main_window_w = None
+    main_window_h = None
+    tk_result_window = None
+    canvas = None
+    position = []
+
+    def __init__(self, init_tk_window):
+        self.tk_main_window = init_tk_window
+        self.tk_main_window.title('请选取二维码')
+        self.tk_main_window.bind('<B1-Motion>', self.process_mouse_event)
+        self.tk_main_window.bind('<Button-1>', self.process_mouse_event)
+        self.tk_main_window.bind('<ButtonRelease-1>', self.get_coordinates)
+
+    def set_window(self):
+        self.main_window_w = self.tk_main_window.winfo_screenwidth()
+        self.main_window_h = self.tk_main_window.winfo_screenheight()
+        self.tk_main_window.resizable(width=False, height=False)
+
+    def load_image(self, image):
+        global tk_image, screenshot
+        new_image = resize(self.main_window_w, self.main_window_h, image)
+        print(new_image.size)
+        screenshot = new_image
+        tk_image = ImageTk.PhotoImage(new_image)
+
+    def process_mouse_event(self, event):
+        rectangle_id = self.draw_rectangle(event)
+        self.clear_rectangle(rectangle_id)
+
+    def draw_canvas(self):
+        global tk_image
+        self.canvas = Canvas(self.tk_main_window, width=self.main_window_w, height=self.main_window_h)
+        self.canvas.create_image(0, 0, image=tk_image, anchor='nw')
+        self.canvas.grid(row=0, column=0)
+
+    def draw_rectangle(self, mouse_event):
+        self.position.append([mouse_event.x, mouse_event.y])
+        start_x = self.position[0][0]
+        start_y = self.position[0][1]
+        if len(self.position) >= 1000:
+            self.position.pop(1000 - 500)
+
+        return self.canvas.create_rectangle(start_x, start_y, mouse_event.x, mouse_event.y, outline='red')
+
+    def clear_rectangle(self, rectangle_id):
+        if rectangle_id >= 3:  # 不删除画布，只删除选择框
+            self.canvas.delete(rectangle_id - 1)
+
+    def get_coordinates(self, event):
+        x1 = self.position[0][0]
+        y1 = self.position[0][1]
+        x2 = self.position[len(self.position) - 1][0]
+        y2 = self.position[len(self.position) - 1][1]
+        print(x1, y1, x2, y2)
+        qr_image = processing_image(screenshot_image, [x1, y1, x2, y2])
+        qr_code = decode_qr_code(qr_image)
+        if not qr_code:
+            pass
+            # tkinter.messagebox.showinfo('信息', '未识别到二维码')
+        else:
+            self.get_qr_code(qr_code)
+        self.position = []
+
+    def get_qr_code(self, result):
+        self.tk_result_window = Toplevel()
+        self.tk_result_window.title('结果')
+        self.tk_result_window['bg'] = 'white'
+        Label(self.tk_result_window, text=result, width=60, height=5, bg='white').grid(row=0, column=0)
+        Button(self.tk_result_window, text='复制到剪切板', command=copy_qr_code(result), padx=10, bg='white').grid(
+            row=1, column=0
+        )
+        Label(self.tk_result_window, bg='white').grid(row=2, column=0)
+
+
+if __name__ == '__main__':
+    screenshot_image = screen_shot()
+    init_window = Tk()
+    window = Main(init_window)
+    window.set_window()
+    window.load_image(screenshot_image)
+    window.draw_canvas()
+    init_window.mainloop()
