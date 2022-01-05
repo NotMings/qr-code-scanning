@@ -16,10 +16,9 @@ def screen_shot():
     return ImageGrab.grab()
 
 
-def processing_image(image, position):
+def process_image(image, position):
     x1, y1, x2, y2 = position
     cropped = image.crop((x1, y1, x2, y2))
-    cropped.show()
     return cropped.convert('L')
 
 

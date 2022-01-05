@@ -3,12 +3,24 @@ from tkinter import *
 import pyperclip
 from PIL import ImageTk
 from screenshot import *
+from pynput import keyboard
 
 global tk_image, screenshot
 
 
-def copy_qr_code(result):
-    pyperclip.copy(result)
+def on_activate():
+    screenshot_image = screen_shot()
+    init_window = Tk()
+    window = Main(init_window)
+    window.set_window()
+    window.load_image(screenshot_image)
+    window.draw_canvas()
+    init_window.focus_force()
+    init_window.mainloop()
+
+
+def for_canonical(f):
+    return lambda k: f(listener.canonical(k))
 
 
 class Main:
@@ -20,6 +32,8 @@ class Main:
 
     def __init__(self, init_tk_window):
         self.tk_main_window = init_tk_window
+        self.copy_button_text = StringVar(self.tk_result_window, '复制到剪切板')
+        # self.tk_main_window.overrideredirect(True)
         self.tk_main_window.title('请选取二维码')
         self.tk_main_window.bind('<B1-Motion>', self.process_mouse_event)
         self.tk_main_window.bind('<Button-1>', self.process_mouse_event)
@@ -33,7 +47,6 @@ class Main:
     def load_image(self, image):
         global tk_image, screenshot
         new_image = resize(self.main_window_w, self.main_window_h, image)
-        print(new_image.size)
         screenshot = new_image
         tk_image = ImageTk.PhotoImage(new_image)
 
@@ -65,12 +78,15 @@ class Main:
         y1 = self.position[0][1]
         x2 = self.position[len(self.position) - 1][0]
         y2 = self.position[len(self.position) - 1][1]
-        print(x1, y1, x2, y2)
-        qr_image = processing_image(screenshot_image, [x1, y1, x2, y2])
+        # 处理一下反选问题
+        if x1 > x2:
+            x1, x2 = x2, x1
+        if y1 > y2:
+            y1, y2 = y2, y1
+        qr_image = process_image(screenshot, [x1, y1, x2, y2])
         qr_code = decode_qr_code(qr_image)
         if not qr_code:
-            pass
-            # tkinter.messagebox.showinfo('信息', '未识别到二维码')
+            tkinter.messagebox.showinfo('信息', '未识别到二维码')
         else:
             self.get_qr_code(qr_code)
         self.position = []
@@ -80,17 +96,24 @@ class Main:
         self.tk_result_window.title('结果')
         self.tk_result_window['bg'] = 'white'
         Label(self.tk_result_window, text=result, width=60, height=5, bg='white').grid(row=0, column=0)
-        Button(self.tk_result_window, text='复制到剪切板', command=copy_qr_code(result), padx=10, bg='white').grid(
-            row=1, column=0
-        )
+        Button(
+            self.tk_result_window,
+            textvariable=self.copy_button_text,
+            command=self.copy_qr_code(result),
+            padx=10,
+            bg='white'
+        ).grid(row=1, column=0)
         Label(self.tk_result_window, bg='white').grid(row=2, column=0)
+
+    def copy_qr_code(self, result):
+        pyperclip.copy(result)
+        print(self.copy_button_text)
+        # self.copy_button_text.set('已复制')
+        # Label(self.tk_result_window, textvariable='已复制', bg='white').grid(row=3, column=0)
 
 
 if __name__ == '__main__':
-    screenshot_image = screen_shot()
-    init_window = Tk()
-    window = Main(init_window)
-    window.set_window()
-    window.load_image(screenshot_image)
-    window.draw_canvas()
-    init_window.mainloop()
+    bind_key = '<ctrl>+q'
+    hotkey = keyboard.HotKey(keyboard.HotKey.parse(bind_key), on_activate)
+    with keyboard.Listener(on_press=for_canonical(hotkey.press), on_release=for_canonical(hotkey.release)) as listener:
+        listener.join()
