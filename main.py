@@ -99,7 +99,7 @@ class Main:
         Button(
             self.tk_result_window,
             textvariable=self.copy_button_text,
-            command=self.copy_qr_code(result),
+            command=lambda: self.copy_qr_code(result),
             padx=10,
             bg='white'
         ).grid(row=1, column=0)
@@ -107,9 +107,7 @@ class Main:
 
     def copy_qr_code(self, result):
         pyperclip.copy(result)
-        print(self.copy_button_text)
-        # self.copy_button_text.set('已复制')
-        # Label(self.tk_result_window, textvariable='已复制', bg='white').grid(row=3, column=0)
+        self.copy_button_text.set('已复制')
 
 
 if __name__ == '__main__':
