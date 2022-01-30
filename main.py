@@ -124,7 +124,7 @@ class Main:
 if __name__ == '__main__':
     config_content = read_config()
     bind_key = config_content
-    print('监听 %s 按键' % bind_key)
+    print('正在监听 %s 按键' % bind_key)
     hotkey = keyboard.HotKey(keyboard.HotKey.parse(bind_key), on_activate)
     with keyboard.Listener(on_press=for_canonical(hotkey.press), on_release=for_canonical(hotkey.release)) as listener:
         listener.join()
