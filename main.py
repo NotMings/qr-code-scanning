@@ -1,11 +1,9 @@
 import tkinter.messagebox
 from tkinter import *
-
-import linecache2 as linecache
+import configparser
 import pyperclip
 from PIL import ImageTk
 from pynput import keyboard
-
 from screenshot import *
 
 global tk_image, screenshot
@@ -13,16 +11,20 @@ global tk_image, screenshot
 
 def read_config():
     try:
-        config_ini = linecache.getline('config.ini', 1)
-        return config_ini.split('=')[1].split("'")[1]
-    except IndexError:
-        return '<ctrl>+<alt>'
+        config_ini = configparser.ConfigParser()
+        config_ini.read('config.ini', encoding='utf-8')
+        key = config_ini.get('Bind-Key', 'bind_key')
+        color = config_ini.get('Select-Rectangle', 'color')
+        width = config_ini.get('Select-Rectangle', 'width')
+        return {'bind_key': key, 'select_rectangle_color': color, 'select_rectangle_width': width}
+    except configparser.NoSectionError:
+        return {'bind_key': '<ctrl>+<alt>', 'select_rectangle_color': 'red', 'select_rectangle_width': 1}
 
 
-def on_activate():
+def on_activate(_select_rectangle_color, _select_rectangle_width):
     screenshot_image = screen_shot()
     init_window = Tk()
-    window = Main(init_window)
+    window = Main(init_window, _select_rectangle_color, _select_rectangle_width)
     window.set_window()
     window.load_image(screenshot_image)
     window.draw_canvas()
@@ -41,8 +43,10 @@ class Main:
     canvas = None
     position = []
 
-    def __init__(self, init_tk_window):
+    def __init__(self, init_tk_window, select_rectangle_outline, select_rectangle_width):
         self.tk_main_window = init_tk_window
+        self.select_rectangle_outline = select_rectangle_outline
+        self.select_rectangle_width = select_rectangle_width
         self.copy_button_text = StringVar(self.tk_result_window, '复制到剪切板')
         # self.tk_main_window.overrideredirect(True)
         self.tk_main_window.title('请选取二维码')
@@ -78,7 +82,14 @@ class Main:
         if len(self.position) >= 1000:
             self.position.pop(1000 - 500)
 
-        return self.canvas.create_rectangle(start_x, start_y, mouse_event.x, mouse_event.y, outline='red')
+        return self.canvas.create_rectangle(
+            start_x,
+            start_y,
+            mouse_event.x,
+            mouse_event.y,
+            outline=self.select_rectangle_outline,
+            width=self.select_rectangle_width
+        )
 
     def clear_rectangle(self, rectangle_id):
         if rectangle_id >= 3:  # 不删除画布，只删除选择框
@@ -123,8 +134,12 @@ class Main:
 
 if __name__ == '__main__':
     config_content = read_config()
-    bind_key = config_content
+    bind_key = config_content['bind_key']
+    select_rectangle_color = config_content['select_rectangle_color']
+    select_rectangle_width = config_content['select_rectangle_width']
     print('正在监听 %s 按键' % bind_key)
-    hotkey = keyboard.HotKey(keyboard.HotKey.parse(bind_key), on_activate)
+    print('选择框颜色 %s' % select_rectangle_color)
+    print('选择框像素 %s' % select_rectangle_width)
+    hotkey = keyboard.HotKey(keyboard.HotKey.parse(bind_key), on_activate(select_rectangle_color, select_rectangle_width))
     with keyboard.Listener(on_press=for_canonical(hotkey.press), on_release=for_canonical(hotkey.release)) as listener:
         listener.join()
