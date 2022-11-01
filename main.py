@@ -140,6 +140,6 @@ if __name__ == '__main__':
     print('正在监听 %s 按键' % bind_key)
     print('选择框颜色 %s' % select_rectangle_color)
     print('选择框像素 %s' % select_rectangle_width)
-    hotkey = keyboard.HotKey(keyboard.HotKey.parse(bind_key), on_activate(select_rectangle_color, select_rectangle_width))
+    hotkey = keyboard.HotKey(keyboard.HotKey.parse(bind_key), lambda: on_activate(select_rectangle_color, select_rectangle_width))
     with keyboard.Listener(on_press=for_canonical(hotkey.press), on_release=for_canonical(hotkey.release)) as listener:
         listener.join()
